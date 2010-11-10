@@ -1,0 +1,475 @@
+\documentclass{acm_proc_article-sp}
+\usepackage[noend]{algpseudocode}
+\usepackage{amsmath}
+\usepackage{seanmacros}
+
+
+%%%%% Force single space for now
+
+\makeatletter
+%Remove ACM copyright notice at the lower left corner
+\renewcommand{\@copyrightspace}{}
+%Make the ACM template into single column
+\renewcommand{\twocolumn}[1][1]{\onecolumn #1}
+\makeatother
+
+
+%%%%% End Force single space
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{algorithm}{Algorithm}
+
+
+\begin{document}
+
+\normalsize
+
+\pagestyle{plain}
+
+\title{Cooperative Coevolution and \\ Univariate Estimation of Distribution Algorithms
+}
+\subtitle{[Extended Abstract]}
+
+\numberofauthors{3}
+\author{
+Christopher Vo\\
+       \affaddr{Dept. Computer Science}\\
+       \affaddr{George Mason University}\\
+       \affaddr{4400 University Dr., MSN 4A5}\\
+       \affaddr{Fairfax, VA 22030}\\
+       \email{cvo1@gmu.edu}
+\alignauthor
+Liviu Panait\\
+       \affaddr{Google, Inc.}\\
+       \affaddr{604 Arizona Avenue}\\
+       \affaddr{Santa Monica, CA 90401}\\
+       \email{liviu@google.com}
+\alignauthor
+Sean Luke\\
+       \affaddr{Dept. Computer Science}\\
+       \affaddr{George Mason University}\\
+       \affaddr{4400 University Dr., MSN 4A5}\\
+       \affaddr{Fairfax, VA 22030}\\
+       \email{sean@cs.gmu.edu}
+}
+\date{}
+
+\maketitle
+\begin{abstract}
+\end{abstract}
+
+% A category with the (minimum) three required fields
+\category{H.4}{Gotta Figure These Out Yet}{Miscellaneous}
+%A category including the fourth, optional field follows...
+\category{D.2.8}{Software Engineering}{Metrics}[All This Stuff Too]
+
+\terms{Cooperative Coevolution, Estimation of Distribution Algorithms}
+
+\keywords{Dunno what goes here} % NOT required for Proceedings
+
+\normalsize
+
+\section{Introduction}
+
+In this paper we discuss a curious relationship between cooperative coevolution algorithms (CCEAs) and univariate estimation of distribution algorithms (EDAs).
+
+\section{Cooperative Coevolution}
+
+Coevolutionary algorithms generally assign fitnesses to an individual not based on some absolute measure but rather on the interaction of that individual with other individuals in the evolutionary system.  The hallmark of a coevolutionary algorithm that the relative order of any two individuals may change depending on the presence of other individuals in the system.
+
+The most common coevolutionary frameworks are the {one-population competitive}, {two-population-competitive}, and {\it n-population cooperative} arrangements.  In the one-population competitive coevolutionary algorithm, individuals in a single population are assessed by pitting them against other individuals in the same population, often in a game [CITE BLONDIE, SOCCER, SeanAndPaul].  In the two-population competitive, individuals from one population are pitted against individuals against an opposing population [CITE SOME STUFF HERE].  Here, typically only one population contains solutions of interest to the experimenter; the second population serves as a foil to push the first population towards robust solutions.
+
+In this paper we focus on {\it n-}population cooperative arrangement, popularly known as Cooperative Coevolutionary Algorithms (CCEAs).  Here the solution space is broken into some {\it n} subsolution spaces, and each subsolution space is assigned a population.  An individual is assessed by grouping it with individuals from the other populations to form a complete solution; the quality of this solution then is incorporated into the individual's fitness.
+
+Cooperative coevolutionary algorithm are most commonly generational, and take one of two forms: {\it serial} versus {\it parallel} algorithms.  In a serial algorithm, each population is evaluated and updated in turn, round-robin.  In the parallel algorithm, all the populations are evaluated before any of them is bred.  The algorithms may also be either generational or steady-state.  Here we will show the two generational algorithms:
+
+\vbox{
+\label{serialgenerational}
+\vspace{1em}
+\begin{algorithmic}[0]
+\label{Yo}
+\Loop \hspace{\fill} {\it ({\sc Algorithm 1.} Serial Generational CCEA)}
+	\For{each population \(p \in P\)}
+		\For{each individual \(i \in p\)}
+			\State Evaluate(\(i, p, P\))
+		\EndFor
+		\vspace{-0.25em}
+	\State Breed whole population \(p\)
+	\EndFor
+\EndLoop
+\end{algorithmic}
+}
+
+
+\vbox{
+\vspace{1em}
+\begin{algorithmic}[0]
+\Loop\hspace{\fill} {\it ({\sc Algorithm 2.}Parallel Generational CCEA)}
+	\For{each population \(p \in P\)}
+		\For{each individual \(i \in p\)}
+			\State Evaluate(\(i, p, P\))
+		\EndFor
+	\EndFor
+		\vspace{-0.25em}
+	\For{each population \(p \in P\)}
+		\State Breed whole population \(p\)
+	\EndFor
+\EndLoop
+\end{algorithmic}
+}
+
+\ignore
+{
+The algorithms may also be steady state, again either serial or parallel.  Here, only one (or a few) individuals from each population are updated at a time, rather than all the individuals.  Ignoring the initialization procedures, the steady-state loops are roughly:
+
+\vbox{
+\vspace{1em}
+\begin{algorithmic}[0]
+\Loop \hspace{\fill} {\it ({\sc Algorithm 3.} Serial Steady-State CCEA)}
+	\For{each population \(p \in P\)}
+		\State Breed an individual \(i\)
+		\State Evaluate(\(i, p, P\))
+		\State Introduce \(i\) into \(p\), discarding another
+	\EndFor
+\EndLoop
+\end{algorithmic}
+}
+
+{
+\vspace{1em}
+\begin{algorithmic}[0]
+\Loop \hspace{\fill} {\it ({\sc Algorithm 4.} Parallel Steady-State CCEA)}
+	\For{each population \(p \in P\)}
+		\State Breed an individual \(i_p\)
+		\State Evaluate(\(i_p, p, P\))
+	\EndFor
+		\vspace{-0.25em}
+	\For{each population \(p \in P\)}
+		\State Introduce \(i_p\) into \(p\), discarding another
+	\EndFor
+\EndLoop
+\end{algorithmic}
+}
+}
+
+Much of the focus of cooperative coevolutionary research has focused on the specifics of the Evaluate(\(i,p,P\)) function.  Choice of evaluation procedure in CCEAs is known to lead to a variety of pathologies.  Next we discuss some theoretical analysis of this issue.
+
+
+\section{The Evolutionary Game Theory Infinite Population Model}
+\label{egt}
+
+Often analyses of cooperative (and other) coevolution will use an infinite population formulation derived from evolutionary game theory (EGT).  This formulation usually assumes that each population has a (typically) finite set of genotypes, but the number of individuals in each population is infinite.  Much EGT work in cooperative coevolution has focused on two populations; we will thus focus on two-population case in this section.  We represent the proportions of genotypes in the first population with the vector \(x\); that is, each genotype \(i\) appears with proportion \(x_i\) in the first population.  Likewise, the second population uses the vector \(y\).  We also assume there exists a matrix \(A\) whose elements \(a_{ij}\) represent the reward genotypes \(i\) (from the first population) and \(j\) (from the second population) receive when combined to form a joint solution.
+
+One common EGT model [CITE WIEGAND 2004], breaks the evolutionary process into two parts.  First, the fitness of all individuals are assessed. We will use the vector \(u\) to represent the fitness of the genotypes in the first population: that is, each genotype \(i\) has fitness \(u_i\).  Likewise, we will use \(w\) for the second population.  Wiegand defined the fitness of a genotype as the average reward received when pairing it with {\it every} member of the corresponding population.  That is, at time \(t\):
+%
+\begin{align}
+\label{egtfitness}
+u_i^{(t)} &= \sum_j a_{ij} y_j^{(t)} &
+w_j^{(t)} &= \sum_i a_{ij} x_i^{(t)}
+\end{align}
+%
+Second, we then update the proportions of each population proportionally to their fitness at time \(t+1\), simulating fitness-proportional selection:
+%
+\begin{align}
+\label{eqtupdate}
+x_i^{(t+1)} &= x_i^{(t)} \left( \frac{u_i^{(t)}}{\sum_k x_k u_k^{(t)}} \right) &
+y_j^{(t+1)} &= y_j^{(t)} \left( \frac{w_j^{(t)}}{\sum_k y_k w_k^{(t)}} \right)
+\end{align}
+%
+Wiegand discovered that this ``complete mixing'' model could converge towards local suboptima surrounding Nash Equilibria in the joint space: if a suboptima basin were large and broad, the system would collect at its peak rather than at another tall but narrow peak centered at a global optimum.  This was largely because the fitness procedure {\it averaged} the performance of an individual over {\it all} individuals in the corresponding population, without regard to how good a collaborator those individuals were.  That is, the fittest individuals tended to be jacks-of-all-trades, doing reasonably well with the average collaborator, rather those which performed optimally when paired with the optimal collaborator (but perhaps poorly on average).  Wiegand termed this pathology {\it relative overgeneralization}.
+
+Later research has shown that the system {\it will} converge if we change the fitness assessment procedure.  The intuitive solution is to base the fitness of individuals in a population not on average collaboration but rather on the maximum performance over all collaborations.  Following Panait [CITE PANAIT DISSERTATION], we might change Equation \ref{egtfitness} to:
+%
+\begin{align}
+\label{panaitfitness}
+u_i^{(t)} & = \max_j a_{ij} &
+w_j^{(t)} &= \max_i a_{ij}
+\end{align}
+%
+Panait provided a proof of convergence to the optimum [CITE THESIS] using this in combination with tournament selection rather than fitness-proportional selection, assuming that the optimum was unique.\footnote{Though it is of less relevance to the thrust of this paper, we also have an unpublished proof of convergence using the fitness-proportional selection Equation \ref{eqtupdate}.}  Panait's derivation of tournament selection (of tournament size \(H\)) transformed Equation \ref{eqtupdate} to:
+%
+\begin{equation}
+\label{tournamentselection}
+\begin{split}
+x_i^{(t+1)} &= x_i^{(t)} \frac{\left( \sum_{\forall k : u_k^{(t)} \leq u_i^{(t)}} x_k^{(t)} \right)^H -  
+                                                 \left( \sum_{\forall k : u_k^{(t)} < u_i^{(t)}} x_k^{(t)} \right)^H}
+                                                 {\sum_{\forall k : u_k^{(t)} = u_i^{(t)}} x_k^{(t)}} \\
+y_i^{(t+1)} &= y_j^{(t)} \frac{\left( \sum_{\forall k : w_k^{(t)} \leq w_j^{(t)}} y_k^{(t)} \right)^H -  
+                                                 \left( \sum_{\forall k : w_k^{(t)} < w_j^{(t)}} y_k^{(t)} \right)^H}
+                                                 {\sum_{\forall k : w_k^{(t)} = w_j^{(t)}} y_k^{(t)}} \\
+\end{split}
+\end{equation}
+
+This curious equation is a result of order statistics.  The details are in [CITE THESIS], but it's worthwhile summarizing here.  In each subequation there are two terms raised to \(H\) each.  These compute the probability that, of a tournament of size \(H\), the winners (there may be ties) will include a genotype whose fitness is the same as genotype \(i\).    The first term gives the probability that all \(H\) tournament entrants will have a fitness less than or equal to \(i\)'s fitness, and the second term gives the probability that all will have a fitness less than that of \(i\).  The remaining elements in each subequation compute the probability that the first such winner is in fact \(i\), as opposed to other fitness-equivalent genotypes.
+
+So far these theoretical models are fairly divorced from real-world CCEAs: the population is infinite; there is no breeding, only selection; and the evaluation procedure involves scanning across all possible collaborators.   But this situation can be improved somewhat.  Panait, Thuyles, and Luke [CITE] have provided a weakened convergence proof when the evaluation procedure for a genotype is to take its maximum performance when paired \(N\) times with randomly chosen collaborators, a common practice in real CCEAs.  This evaluation procedure, which replaces Equations \ref{egtfitness} or \ref{panaitfitness}, is:
+ 
+\begin{equation}
+\label{maxofn}
+\begin{split}
+u_i^{(t)} &= \sum_j a_{ij} y_j^{(t)} 
+				  \frac{\left( \sum_{\forall k : a_{ik} \leq a_{ij}} y_k^{(t)} \right)^N -  
+                                                \left( \sum_{\forall k : a_{ik} < a_{ij}} y_k^{(t)} \right)^N}  
+                                                 {\sum_{\forall k : a_{ik} = a_{ij}} y_k^{(t)}} \\
+w_i^{(t)} &= \sum_i a_{ij} x_i^{(t)} 
+				  \frac{\left( \sum_{\forall k : a_{kj} \leq a_{ij}} x_k^{(t)} \right)^N -  
+                                                \left( \sum_{\forall k : a_{kj} < a_{ij}} x_k^{(t)} \right)^N}  
+                                                 {\sum_{\forall k : a_{kj} = a_{ij}} x_k^{(t)}} \\
+\end{split}
+\end{equation}
+
+Note the similarity to Equation \ref{tournamentselection}.  This is again due to the use of ``max''.  In the first subequation, for example, the fractional term and the  \(y_j^{(t)}\) together indicate the probability that a given pairing \({\langle}i,j{\rangle}\) will provide the highest reward for a given individual \(i\) out of \(N\) such pairings.  This is then multiplied by the reward \(a_{ij}\) and summed up to compute the expected maximum reward for \(i\) when doing \(N\) pairings.
+
+Panait, Thuyles, and Luke [CITE] proved weak convergence properties when using maximum-of-\(N\) (Equation \ref{maxofn}) for the evaluation procedure and tournament selection (Equation \ref{tournamentselection}) for the update procedure.  Specifically for any probability \(\epsilon\) there exists a size \(N\) which is guaranteed to achieve convergence within \(\epsilon\).  Panait [CITE] has also proven the same when using fitness proportional selection (Equation \ref{eqtupdate}) instead of tournament selection.
+
+How large should \(N\) be?  In a real scenario, \(N\) is effectively bounded by the size of the collaborating population(s).  But even this upper bound is problematic: large values of \(N\) are more accurate and more likely to converge rapidly to the optimum; but may require more total number of evaluations than is realistic given the evaluation budget.  Thus recent work has focused on reducing the total number of evaluations by identifying an {\it archive} of individuals from the collaborating population(s) which provide as good an assessment as testing with {\it entire} collaborating population would provide.  As it turns out, this archive size can be very small, resulting in a significant reduction in evaluations.
+
+\section{Univariate Estimation of Distribution Algorithms}
+
+Estimation of Distribution Algorithms (EDAs) replace the evolutionary computation population with a statistical distribution of an infinite population.  Most such algorithms iteratively generate samples (individuals) from the distribution, test those samples, and then update the distribution to more often generate high-fitness samples and less-often generate low-fitness samples in the future.
+
+The obvious difficulty is that the distribution of an infinite population, over the entire space, is of high dimensionality and complexity.  Early on the common approach was to break the joint distribution into separate per-allele distributions.  That is, we assumed an individual consisted of a set of alleles, and for each allele, we maintained a distribution of probabilities of the gene settings for that allele.  In the simplest case, if the individual was a boolean vector, then each allele distribution would be a single number {0...1} indicating the probability of choosing a 1 instead of a 0 (the only two gene values).  Were the individual to be a vector of floating-point numbers, we might represent each allele as a gaussian distribution over possible values, for example.  Common Univariate EDAs include the Univariate Marginal Distribution Algorithm (UMDA) \cite{umda}, the Compact Genetic Algorithm (CGA) \cite{cga}, and Population-Based Incremental Learning (PBIL) \cite{pbil}.  As illustration, here is the pseudocode for UMDA, a simple but effective univariate EDA:
+
+\vbox{
+\vspace{1em}
+\begin{algorithmic}[0]
+\Loop \hspace{\fill} {\it ({\sc Algorithm 3.} UMDA)}
+	\For{q from 1 to Q}
+		\State Create an individual \(i_q\) by choosing a gene at random under each allele distribution.
+		\State Evaluate(\(i_q\))
+	\EndFor
+	\State Select the best R individuals from among the various \(i_1...i_q\)
+	\For{each allele distribution \(a\)}
+		\State Change the distribution to reflect the distribution of genes for that allele among the \(R\) best individuals
+	\EndFor
+\EndLoop
+\end{algorithmic}
+}
+
+By pushing the joint distribution into individual marginal distributions, univariate EDAs are throwing away information that is normally available to a more traditional evolutionary algorithm: and that information is important to solve non-separable problems.  In univariate EDAs each distribution is being updated based solely on its performance, without consideration of the particular other distributions with which it is being conjoined.  Non-separable problems require that consideration, as their fitness is based on the nonlinear combination of various elements.  Recognizing this weakness, EDA designers have attempted to create richer distributions involving more relationships among the alleles.  Perhaps best known are variations of the Bayesian Optimization Algorithm (BOA) \cite{pelikan99boa,hboa}, which attempts to use a bayesian network to model the entire joint space in a sparse manner.
+
+Despite these difficulties, there has been some theoretical work on convergence properties in univariate EDAs.  UMDA has been shown to converge to the optimum for separable problems \cite{MuehlenbeinManig1999JCIT}, and for non-separable problems when augmented with a simulated-annealing-like Boltzman selection \cite{Muhlenbein99schemata,MuehlenbeinMahnig1999ECJ}.  A theoretical infinite-population version of UMDA has also been shown to converge to the optimum \cite{Zhang2004,ZhangMuehlenbein2004}.  Rastegar and Hariri have shown convergence to local optima for PBIL \cite{pbilconverge} and CGA \cite{cgaconverge}.
+
+
+\section{EDA and EGT}
+
+CCEAs do not operate over a joint population but rather over a set of marginal populations, each responsible for some portion of the joint solution.  In the EGT infinite population model of CCEAs, these marginal populations are infinite in size, that is, they are distributions rather than samples.  We wish to point out here that, crucially, {\it univariate EDAs do exactly the same thing}.  We are not used to viewing EDAs' marginal distributions as ``infinite populations'' in the CCEA sense, but that is precisely what they are.
+
+Essentially, the {\it only} real difference between CCEAs and univariate EDAs is that CCEAs represent their marginal distributions with samples (the individuals); whereas EDAs commonly represent their marginal distributions with tables, histograms, or parameterized distributions (such as gaussians).  And the EGT model used in CCEA theory is not only an equivalent theoretical foundation for univariate EDAs, it is what univariate EDAs are in reality!
+
+This very direct connection between CCEAs and univariate EDAs may permit a significant degree of cross-pollination.  For example, the CCEA community has expended considerable energy on understanding exactly why CCEA models exhibit pathologies: this work should prove fruitful in explaining similar issues in EDAs.  Likewise, the EDA community has generated efficient algorithms which may improve on existing CCEA approaches: the primary item that needs to be done is to accommodate the change from a histogram or parameterized  distribution representation to sample distribution (a ``population''). 
+
+\subsection{A Proof and an Algorithm}
+
+In Section \ref{egt} we noted that Panait, Thuyles, and Luke [CITE] demonstrated \(\epsilon\)-bounds on convergence to the optimum in a two-population EGT CCEA using the maximum-of-\(N\)-collaborators evaluation procedure (Equation \ref{panaitfitness}) in combination with tournament selection (Equation \ref{tournamentselection}).  As a first example of the potential for cross-pollination, we have extended this two-population proof to the \(M\)-population case.  We include the proof of this theorem in Section \ref{proofs}.
+
+This proof leads directly to a new EDA algorithm with proven optimal convergence properties.  Specifically, if we wish to converge to the optimum within \(\epsilon\) probability, there exists a value of \(N\) is proven to converge to the optimum within that probability.  The algorithm is not particularly efficient\,---\,it requires more evaluations per round than PBIL, CGA, and UMDA\,---\,but is suggestive of future opportunities due to the established connection.
+
+The algorithm is largely an elaboration of the infinite-population equivalent of the Parallel Generational CCEA (Algorithm 2), using maximum-of-\(N\)-collaborators for fitness assessment, and tournament selection of size \(H\):
+
+\vbox{
+\vspace{1em}
+\begin{algorithmic}[0]
+\Loop \hspace{\fill} {\it ({\sc Algorithm 4.} CMLA OR SOMETHING)}
+	\For{each allele distribution \(a\)}
+		\For{each gene value \(g \in a\)}
+			\For{N times}
+				\State Construct an individual \(i\) using allele \(a\) fixed to \(g\),
+				\State\qquad and using other genes selected at random under the remaining allele distributions. 
+				\State Evaluate(\(i\))
+			\EndFor
+		\EndFor
+	\EndFor
+	\vspace{-0.25em}
+	\For{each allele distribution \(a\)}
+		\State Change the distribution to reflect performing tournament selection of size \(H\)
+		\State\qquad over the genes in \(a\) (using Equation \ref{tournamentselection}).
+	\EndFor
+\EndLoop
+\end{algorithmic}
+}
+
+\subsection{Comparison and Results}
+
+We have compared our algorithm with the univariate EDA algorithms PBIL, CGA, and UMDA.  We did not expect the algorithm to perform as well compared to them, primarily because it is less frugal in its use of evaluations; and the results bear this out. 
+
+{\bf We present our empirical experiments here.  Okay, so it's not so hot.  The main point here is to show that we can actually {\it build} such an algorithm.}
+
+\section{So Where Do We Go from Here?}
+
+{\bf Here we talk about other things we could do --- move EDA algorithms into CCEAs?   Explain why EDAs may have convergence problems?  Etc.  Or maybe this section should go into the EDAs and EGT section, dunno.}
+
+\section{Conclusion}
+
+{\bf A conclusion!}
+
+
+\section{Proofs}
+\label{proofs}
+
+As discussed in Section \ref{egt}, it has been shown that a two-population cooperative coevolutionary EGT model, with tournament selection, and with maximum-of-\(M\)-collaborations fitness assessment, will converge to the optimum within some \(\epsilon\) probability given a sufficiently large value of \(M\).  This model is the one described by Equations \ref{maxofn} and \ref{tournamentselection}.  The Theorem here extends this convergence proof to the \(N\)-population cooperative coevolutionary EGT model.
+
+\paragraph{Notation} We use $\left( X_i \right)$ to denote the space of genotypes of the $i$-th population (for simplicity, we have $X_i = \left\{1, 2, 3, ..., n_i \right\}$ where $n_i$ is the number of genotypes for the $i$-th population.  We  further define $X_{-i} = X_1 \times  ... \times X_{i-1} \times X_{i+1} \times ... \times X_M$ is the joint space of all possible collaborators for an individual from population $i$ (Notice that \(X_i\) was missing).  For each population $p$ from $1$ to $M$, for each genotype $i$ from $1$ to $n_p$, we let ${_p}x^{(t)}_i$ denote the ratio of individuals with genotype $i$ in population $p$ at generation $t$.  
+
+Here we will deviate from our previous equations in our use of \(j\).  Now \(j\) will represent a {\it tuple} of individuals chosen from various populations to collaborate with individual \(i\).  We will also extend \(y_j\) to refer not to the proportion of genotype \(j\) in the second population (as was the case earlier) but rather to the proportion of collaborating tuple \(j\) in the joint collaboration space.  That is, for tuple $j \in X_{-i}$ (the $i$-th population is missing from $j$) with $j = \left( j_1, ..., j_{i-1}, j_{i+1}, ..., j_M \right)$, we use the notation $y^{(t)}_j = \prod^{v=1..M}_{v \ne p} {_v}x^{(t)}_{j_v}$.  We also will abuse notation so that $a_{i j}$ is the reward received for genotype $i$ when combined with collaborators described by tuple $j$.
+
+Last, for parsimony, we will abuse the standard notation for sum and product.  Specifically, in the notations \(\sum^{\mbox{foo}}_{\mbox{bar}}\) or \(\prod^{\mbox{foo}}_{\mbox{bar}}\),  foo will hold the set of elements over which we are summing, and bar will hold additional constraints on those elements.  For example, \(\sum^{k \in X_{-p}}_{a_{i k} = a_{i j}} ...\)  When there are no additional constraints, foo will be on the bottom in its traditional location, that is, \(\sum_{\mbox{foo}}\) or \(\prod_{\mbox{foo}}\).
+
+The formal model for CCEAs with N individuals becomes:
+
+\noindent\begin{eqnarray}
+{_p}u^{(t)}_i & = & \sum_{j \in X_{-p}} { a_{i j} \frac{y^{(t)}_j}{\sum^{k \in X_{-p}}_{a_{i k} = a_{i j}} y^{(t)}_k} \left( \left( \sum^{k \in X_{-p}}_{a_{i k} \leq a_{i j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i k} < a_{i j} } y^{(t)}_k \right)^N \right) } \label{approx_eqn1}\\
+{_p}x^{(t+1)}_i   & = & \frac{{_p}x^{(t)}_i}{\sum^{k \in X_{-p}}_{{_p}u^{(t)}_k = {_p}u^{(t)}_i} {_p}x^{(t)}_k} \left( \left( \sum^{k \in X_{-p}}_{{_p}u^{(t)}_k \leq {_p}u^{(t)}_i} {_p}x^{(t)}_k \right)^H - \left( \sum^{k \in X_{-p}}_{{_p}u^{(t)}_k < {_p}u^{(t)}_i} {_p}x^{(t)}_k \right)^H \right) \label{approx_eqn2}
+\end{eqnarray}
+
+\noindent for each population $p$ and each genotype $i$ in $p$.  Note that the second equation is identical (tournament selection).
+
+\begin{lemma}
+Assume the populations for the EGT model are initialized at random based on a uniform distribution over all possible initial populations.  Then, for any $\epsilon>0$, there exists $\theta_\epsilon>0$ such that
+
+\begin{eqnarray}
+& P\left( \min_{i=1..n_p} {_p}x^{(0)}_i \leq \theta_\epsilon \right) < \epsilon \label{ineq1}\\
+& P\left( \max_{i=1..n_p} {_p}x^{(0)}_i \geq 1-\theta_\epsilon \right) < \epsilon \label{ineq2}
+\end{eqnarray}
+
+for all populations $p$ from $1$ to $M$.
+\end{lemma}
+
+\begin{proof}
+
+One method to sample the simplex $\Delta^n$ uniformly is described in \cite{devroye86nonuniform} (pages 568--569): take $n-1$ uniformly distributed numbers in $\left[0,1\right]$, then sort them, and finally use the differences between consecutive numbers (also, the difference between the smallest number and $0$, and the difference between $1$ and the largest number) as the coordinates for the point.  
+
+Let $p$ be an arbitrary population from $1$ to $M$.  It follows that $\left({_p}x^{(0)}_i\right)_{i=1..n_p}$ can be generated as the difference between $n-1$ numbers generated uniformly in $\left[0,1\right]$.  It follows that $\min_{i=1..n} {_p}x^{(0)}_i$ is the closest distance between two such numbers (and possibly the boundaries $0$ and $1$).
+
+Suppose $\gamma>0$ is a small number.  We iterate over the $n_p - 1$ uniformly-distributed random numbers that are needed to generate an initial population $\left({_p}x^{(0)}_i\right)_{i=1..n_p}$.  The probability that the first number is not within $\gamma$ of the boundaries $0$ and $1$ is $1-2\gamma$.  The probability that the second number is not within $\gamma$ of the boundaries or of the first number is less than or equal to $1-4\gamma$.  In general, the probability that the $k$th number is not within $\gamma$ of the boundaries or of the first $k-1$ numbers is less than or equal to $1-2 k \gamma$.  Given that the numbers are generated independently of one another, the probability that the closest pair of points (considering the boundaries) is farther apart than $\gamma$ is equal to
+
+\begin{eqnarray*}
+&P\left( \min_{i=1..n_p} {_p}x^{(0)}_i \leq \gamma \right) = 1 - P\left( \min_{i=1..n_p} {_p}x^{(0)}_i > \gamma \right)\\
+&\quad \quad = 1 - \prod^{n_p - 1}_{i=1} \left( 1-2 i \gamma \right) \quad \leq \quad 1 - \left( 1 - 2 \left(n_p - 1\right) \gamma \right)^{n_p - 1}\\
+&\quad \quad \leq \quad 1 - \left( 1 - 2 \left(n_{p^*} - 1\right) \gamma \right)^{n_{p^*} - 1}
+\end{eqnarray*}
+
+\noindent where $n_{p^*} = \max_{i=1..M} n_i$ \textbf{Would you guys please double-check this last inequality which introduces $n_{p^*}$?}.  Given that
+\begin{eqnarray*}
+\lim_{\gamma \rightarrow 0} 1 - \left( 1 - 2 \left(n_{p^*} - 1\right) \gamma \right)^{n_{p^*} - 1} & = & 0\\
+\end{eqnarray*}
+
+\noindent it follows that for any $\epsilon>0$ there exists $\theta_\epsilon>0$ such that $P\left( \min_{i=1..n_p} {_p}x^{(0)}_i \leq \theta_\epsilon \right) < \epsilon$ for all populations $p$ from $1$ to $M$.
+
+To prove Inequality~\ref{ineq2}, consider that \mbox{$\max_{i=1..n_p} {_p}x^{(0)}_i \geq 1-\theta_\epsilon$} implies that all other ${_p}x_i$ ratios except for the maximum are smaller to $\theta_\epsilon$, which, as proven above, occurs with probability smaller than $\epsilon$.\end{proof}
+
+\begin{lemma}
+Assume the populations for the EGT model are initialized at random based on a uniform distribution over all possible initial populations.  Then, for any $\epsilon>0$, there exists $\eta_\epsilon>0$ such that
+
+\[
+P\left( \min_{p=1..M} \min_{i=1..n_p} {_p}x^{(0)}_i > \eta_\epsilon \wedge \max_{p=1..M} \max_{i=1..n_p} {_p}x^{(0)}_i < 1-\eta_\epsilon\right) \geq 1 - \epsilon\\
+\]
+
+In other words, there is an arbitrarily probability that the initial populations contain reasonable values (not too close to either $0$ or $1$) for all proportions of genotypes.
+\end{lemma}
+
+\begin{proof}
+We apply Lemma 1 for $\frac{1-\sqrt[M]{1-\epsilon}}{2}$, which is greater than 0.  The specific value of $\eta_\epsilon$ for this proof equals the value of $\theta_\frac{1-\sqrt[M]{1-\epsilon}}{2}$ from Lemma 1.  It follows that:
+
+\begin{eqnarray*}
+& P\left( \min_{p=1..M} \min_{i=1..n_p} {_p}x^{(0)}_i > \eta_\epsilon \wedge \max_{p=1..M} \max_{i=1..n_p} {_p}x^{(0)}_i < 1-\eta_\epsilon \right)\\
+& = \prod_{p=1..M} P \left( \min_{i=1..n_p} {_p}x^{(0)}_i > \theta_\frac{1-\sqrt[M]{1-\epsilon}}{2} \wedge \max_{i=1..n_p} {_p}x^{(0)}_i < 1-\theta_\frac{1-\sqrt[M]{1-\epsilon}}{2} \right) \\
+&  =  \prod_{p=1..M} \left( 1 - P \left( \min_{i=1..n_p} {_p}x^{(0)}_i \leq \theta_\frac{1-\sqrt[M]{1-\epsilon}}{2} \vee \max_{i=1..n_p} {_p}x^{(0)}_i \geq 1-\theta_\frac{1-\sqrt[M]{1-\epsilon}}{2} \right) \right)\\
+& \geq \prod_{p=1..M} \left( 1 - \left( P \left( \min_{i=1..n_p} {_p}x^{(0)}_i \leq \theta_\frac{1-\sqrt[M]{1-\epsilon}}{2} \right) + P \left( \max_{i=1..n_p} {_p}x^{(0)}_i \geq 1-\theta_\frac{1-\sqrt[M]{1-\epsilon}}{2} \right) \right) \right)\\
+& \geq \prod_{p=1..M} \left( 1 - 2 \frac{1-\sqrt[M]{1-\epsilon}}{2} \right) \\
+& = 1 - \epsilon
+\end{eqnarray*}\end{proof}
+
+
+
+\begin{theorem}
+Given a joint reward system with a unique global optimum $a_{i_1^\star i_2^\star ... i_M^\star}$, for any $\epsilon > 0$ and any $H \geq 2$, there exists a value $N_\epsilon \geq 1$ such that the theoretical CCEA model in Equations~\ref{approx_eqn1}--\ref{approx_eqn2} converges to the global optimum with probability greater than $\left(1-\epsilon\right)$ for any number of collaborators $N$ such that $N \geq N_\epsilon$.
+\end{theorem}
+
+\begin{proof}
+We only use $\epsilon$ as a guarantee for the worst case scenario for the proportions of individuals in the initial populations.  From Lemma~2, it follows that there exists $\eta_\epsilon>0$ such that with probability at least $1-\epsilon$, it holds that $\eta_\epsilon < {_p}x^{(0)}_i < 1 - \eta_\epsilon$ for all populations genotypes $i$ in all populations $p$.  In other words, with probability $\epsilon$, the initial populations will not have any proportion of individuals that cover more than $1-\eta_\epsilon$, nor cover less than $\eta_\epsilon$ of the entire population.
+
+We will prove that there exists \mbox{$N_\epsilon \geq 0$} such that the EGT model converges to the global optimum for any $N \geq N_\epsilon$ and for all initial configurations that satisfy \mbox{$\eta_\epsilon < {_p}x^{(0)}_{i^\star} < 1 - \eta_\epsilon$} for all populations $p$.  To this end, let $\alpha$ be the second highest element joint reward ($\alpha < a_{i^* j^*}$).    It follows that ${_p}u^{(t)}_i \leq \alpha$ for all $i \neq i^\star$ in all populations $p$.  Here's why (by refining Equation~\ref{approx_eqn1}):
+
+\noindent\begin{eqnarray*}
+{_p}u^{(t)}_i & = & \sum_{j \in X_{-p}} { a_{i j} \frac{y^{(t)}_j}{\sum^{k \in X_{-p}}_{a_{i k} = a_{i j}} y^{(t)}_k} \left( \left( \sum^{k \in X_{-p}}_{a_{i k} \leq a_{i j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i k} < a_{i j} } y^{(t)}_k \right)^N \right) }\\
+{_p}u^{(t)}_i & \leq & \sum_{j \in X_{-p}} { \alpha \frac{y^{(t)}_j}{\sum^{k \in X_{-p}}_{a_{i k} = a_{i j}} y^{(t)}_k} \left( \left( \sum^{k \in X_{-p}}_{a_{i k} \leq a_{i j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i k} < a_{i j} } y^{(t)}_k \right)^N \right) }\\
+& \leq & \alpha \sum_{j \in X_{-p}} { \left( \left( \sum^{k \in X_{-p}}_{a_{i k} \leq a_{i j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i k} < a_{i j} } y^{(t)}_k \right)^N \right) } \leq \alpha
+\end{eqnarray*}
+
+Next, we work on identifying a lower bound for ${_p}u^{(t)}_{i_p^\star}$.  For simplicity, let $i^*$ stand for $i_p^*$, and $j^*$ stand for the optimal tuple of collaborators for $i^*$.
+
+\noindent\begin{eqnarray*}
+{_p}u^{(t)}_{i^\star} & = & \sum_{j \in X_{-p}} { a_{i^\star j} \frac{y^{(t)}_j}{ \sum^{k \in X_{-p}}_{a_{i^\star k} = a_{i^\star j}} y^{(t)}_k } \left( \left( \sum^{k \in X_{-p}}_{a_{i^\star k} \leq a_{i^\star j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i^\star k} < a_{i^\star j} } y^{(t)}_k \right)^N \right) }\\
+& = & a_{i^* j^*} \left( 1 - \left( 1 - y^{(t)}_{j^\star} \right) ^N \right) +\\
+& & \sum^{j \in X_{-p}}_{j \neq j^\star} { a_{i^\star j} \frac{y^{(t)}_j}{ \sum^{k \in X_{-p}}_{a_{i^\star k} = a_{i^\star j} } y^{(t)}_k} \left( \left( \sum^{k \in X_{-p}}_{a_{i^\star k} \leq a_{i^\star j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i^\star k} < a_{i^\star j} } y^{(t)}_k \right)^N \right) }
+\end{eqnarray*}
+
+\noindent We further refine the lower bound for ${_p}u^{(t)}_{i^\star}$:
+\noindent\begin{eqnarray*}
+{_p}u^{(t)}_{i^\star} & = & a_{i^* j^*} \left( 1 - \left( 1 - y^{(t)}_{j^\star} \right) ^N \right) +\\
+& & \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} \geq 0} { a_{i^\star j} \frac{y^{(t)}_j}{ \sum^{k \in X_{-p}}_{a_{i^\star k} = a_{i^\star j} } y^{(t)}_k} \left( \left( \sum^{k \in X_{-p}}_{a_{i^\star k} \leq a_{i^\star j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i^\star k} < a_{i^\star j} } y^{(t)}_k \right)^N \right) }+\\
+& & \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} \frac{y^{(t)}_j}{ \sum^{k \in X_{-p}}_{a_{i^\star k} = a_{i^\star j} } y^{(t)}_k} \left( \left( \sum^{k \in X_{-p}}_{a_{i^\star k} \leq a_{i^\star j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i^\star k} < a_{i^\star j} } y^{(t)}_k \right)^N \right) }\\
+& \geq & a_{i^* j^*} \left( 1 - \left( 1 - y^{(t)}_{j^\star} \right) ^N \right) +\\
+& & \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} \frac{ y^{(t)}_j}{ \sum^{k \in X_{-p}}_{a_{i^\star k} = a_{i^\star j} } y^{(t)}_k} \left( \left( \sum^{k \in X_{-p}}_{a_{i^\star k} \leq a_{i^\star j} } y^{(t)}_k \right)^N - \left( \sum^{k \in X_{-p}}_{a_{i^\star k} < a_{i^\star j} } y^{(t)}_k \right)^N \right) }\\
+& \geq & a_{i^* j^*} \left( 1 - \left( 1 - y^{(t)}_{j^\star} \right) ^N \right) + \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} \frac{ y^{(t)}_j}{ \sum^{k \in X_{-p}}_{a_{i^\star k} = a_{i^\star j} } y^{(t)}_k} \left( \sum^{k \in X_{-p}}_{a_{i^\star k} \leq a_{i^\star j} } y^{(t)}_k \right)^N }
+\end{eqnarray*}
+
+Given that $\sum_{k=1}^{m} y^{(t)}_k = 1$, we further refine the previous inequality:
+
+\noindent\begin{eqnarray}
+\nonumber {_p}u^{(t)}_{i^\star} & \geq & a_{i^* j^*} \left( 1 - \left( 1 - y^{(t)}_{j^\star} \right) ^N \right) + \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} \frac{ y^{(t)}_j}{ \sum^{k \in X_{-p}}_{a_{i^\star k} = a_{i^\star j} } y^{(t)}_k} \left( 1 - y^{(t)}_{j^\star} \right)^N }\\
+\nonumber & \geq & a_{i^* j^*} \left( 1 - \left( 1 - y^{(t)}_{j^\star} \right) ^N \right) + \left( 1 - y^{(t)}_{j^\star} \right)^N \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} }\\
+& = & a_{i^* j^*} - \left( 1 - y^{(t)}_{j^\star} \right) ^N \left( a_{i^* j^*}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right)\\
+& = & a_{i^* j^*} - \left( 1 - \prod^{r=1..M}_{r \ne p} {_r}x^{(t)}_{j_r^\star} \right) ^N \left( a_{i^* j^*}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right) \label{u_i:star:bounds}
+\end{eqnarray}
+
+The inequalities $\eta_\epsilon < {_r}x^{(0)}_{j_r^\star} < 1 - \eta_\epsilon$ hold for all initial populations $r$, as inferred earlier from Lemma~2.  It follows from Equation~\ref{u_i:star:bounds} that
+
+\begin{eqnarray}
+{_p}u^{(0)}_{i^\star} & \geq & a_{i^\star j^\star} - \left( 1 - {\eta_\epsilon}^{M-1} \right) ^N \left( a_{i^\star j^\star}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right) \label{u_i:star:lower:bound}
+\end{eqnarray}
+
+However,
+
+\begin{equation}
+\lim_{N \rightarrow \infty} a_{i^\star j^\star} - \left( 1 - {\eta_\epsilon}^{M-1} \right) ^N \left( a_{i^\star j^\star}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right) \quad = \quad a_{i^\star j^\star} \label{u_i:star:lim2}
+\end{equation}
+
+Given that $a_{i^\star j^\star} > \alpha$, Equation~\ref{u_i:star:lim2} implies that there exists $N_p \geq 1$ such that
+
+\begin{equation}
+a_{i^\star j^\star} - \left( 1 - {\eta_\epsilon}^{M-1} \right) ^N \left( a_{i^\star j^\star}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right) > \alpha \label{lim:inf:greater:alpha}
+\end{equation}
+
+\noindent for all $N \geq N_p$.  From Equations~\ref{u_i:star:bounds} and \ref{lim:inf:greater:alpha}, it follows that ${_p}u^{(0)}_{i^\star} > \alpha$ for all $N \geq N_p$.  Observe that $N_p$ does not depend on the initial population $p$ we considered this far.
+
+Let $N_\epsilon = max_{p=1..M} \left( N_p \right)$, and let $N \geq N_\epsilon$.  Next, we show by induction by $t$ (the number of iterations of the model, i.e. the number of generations) that the following inequalities hold for all populations $p$:
+
+\begin{eqnarray*}
+{_p}u^{(t)}_{i^\star} & \geq & a_{i^\star j^\star} - \left( 1 - {\eta_\epsilon}^{M-1} \right) ^N \left( a_{i^\star j^\star}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right)\\
+{_p}x^{(t+1)}_{i^\star} & \geq & {_p}x^{(t)}_{i^\star}\\
+\end{eqnarray*}
+
+At the first generation ($t=0$), the first inequality holds (from Equation~\ref{u_i:star:lower:bound}).  For a population $p$, we combine this with the definition of $N$.  It follows that ${_p}u^{(0)}_{i^\star} > {_p}u^{(0)}_i$ for all $i \neq i^\star$.  As a consequence, ${_p}x^{(1)}_{i^\star} = 1 - \left( 1 - {_p}x^{(0)}_{i^\star} \right)^H > {_p}x^{(0)}_{i^\star}$ (from Equation~\ref{approx_eqn1}).
+
+To prove the inductive step, it follows from Equation~\ref{u_i:star:bounds} and from the inductive hypothesis that 
+
+\noindent\begin{eqnarray*}
+{_p}u^{(t+1)}_{i^\star} & \geq & a_{i^\star j^\star} - \left( 1 - y^{(t+1)}_{j^\star} \right) ^N \left( a_{i^\star j^\star}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right)\\
+& \geq & a_{i^\star j^\star} - \left( 1 - y^{(t)}_{j^\star} \right) ^N \left( a_{i^\star j^\star}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right)\\
+& \cdots &\\
+& \geq & a_{i^\star j^\star} - \left( 1 - y^{(0)}_{j^\star} \right) ^N \left( a_{i^\star j^\star}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right)\\
+& \geq & a_{i^\star j^\star} - \left( 1 - {\eta_\epsilon}^M-1 \right) ^N \left( a_{i^\star j^\star}  - \sum^{j \in X_{-p}}_{j \neq j^\star \wedge a_{i^\star j} < 0} { a_{i^\star j} } \right)
+\end{eqnarray*}
+
+Given the definitions of $N$ and $\alpha$, this also implies that ${_p}u^{(t+1)}_{i^\star} > \alpha > {_p}u^{(t+1)}_{i}$ for all $i \neq i^\star$.  As a consequence, \mbox{${_p}x^{(t+1)}_{i^\star} = 1 -  \left( 1 - {_p}x^{(t)}_{i^\star} \right)^H \geq {_p}x^{(t)}_{i^\star}$} (from Equation~\ref{approx_eqn1}).
+
+Having shown that ${_p}x^{(t)}_{i^\star}$ are monotonically increasing for all populations $p$, and given that they are all bounded between $0$ and $1$, it follows that they each converge to some value.  Given that ${_p}u^{(t)}_{i^\star} > {_p}u^{(t)}_i$ for all $i \neq i^\star$ at each iteration, it follows that ${_p}x^{(t+1)}_{i^\star} = 1 - \left( 1 - {_p}x^{(t)}_{i^\star} \right)^H$ at each iteration as well.  If $\bar{{_p}x}$ is the limit of the ${_p}x^{(t)}_{i^\star}$ values when $t$ goes to $\infty$, then $\bar{{_p}x} = 1 - \left( 1 - \bar{{_p}x} \right)^H$, which implies that $\bar{{_p}x}$ is either $0$ or $1$.  We can rule out the $0$ limit because the values of ${_p}x^{(t)}_{i^\star}$ are monotonically increasing and ${_p}x^{(0)}_{i^\star}>\eta_\epsilon$.  Thus, ${_p}x^{(t)}_{i^\star}$ converges to $1$ for all populations $p$.\end{proof}
+
+\bibliographystyle{abbrv}
+\bibliography{foga09-eda}
+
+ \end{document}
