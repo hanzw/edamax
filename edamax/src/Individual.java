@@ -11,7 +11,7 @@ public abstract class Individual implements Comparable, Cloneable {
 	public boolean evaluated;
 	public boolean ideal;
 	MersenneTwisterFast rand;
-
+	
 	public Individual(MersenneTwisterFast rand) {
 		this.rand = rand;
 	}
@@ -62,7 +62,7 @@ public abstract class Individual implements Comparable, Cloneable {
 		else
 			return 0;
 	}
-
+	
 	/**
 	 * Make a copy of the Individual.
 	 */

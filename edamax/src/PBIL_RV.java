@@ -6,23 +6,20 @@ import java.util.*;
  * 
  * @author Christopher Vo (cvo1@gmu.edu)
  */
-public class PBIL extends Algorithm {
+public class PBIL_RV extends Algorithm {
 
 	// PBIL-specific parameters and defaults
 	int samples = 200; // the number of samples to grab each iteration
 	double learn_rate = 0.005; // strength of the update function
 	int selection_size = 2; // how large the selection pool is
-	int genome_size = 100; // the length of the genome
+	int genome_size = 4; // the length of the genome
 	int generations = 300; // the number of generations to run PBIL.
 
 	// Probability vector
-	// NOTE: Note that this probability vector assumes a BitVectorIndividual.
-	// We'll keep it like this because the update rule in the literature depends
-	// on this kind of representation.
-	double p[];
+	MixGaussVariable p[];
 
 	// The list of samples.
-	BitVectorIndividual[] sv;
+	DoubleVectorIndividual[] sv;
 
 	/**
 	 * Constructor of the PBIL algorithm.
@@ -35,7 +32,7 @@ public class PBIL extends Algorithm {
 	 *            The problem instance. Currently, this code assumes the problem
 	 *            instance is a BitVectorIndividual.
 	 */
-	public PBIL(PropertyReader props, Problem problem, BufferedWriter out) {
+	public PBIL_RV(PropertyReader props, Problem problem, BufferedWriter out) {
 
 		// do all the setup from the abstract super
 		super(props, problem, out);
@@ -111,12 +108,12 @@ public class PBIL extends Algorithm {
 
 	}
 
-	protected void updateDistribution(Individual[] evalVect, double[] probs) {
+	protected void updateDistribution(Individual[] evalVect, MixGaussVariable[] probs) {
 		// sort samples (note, the "natural order" given by the comparator
 		// in Individual is to arrange highest fitness individuals in front
 		// of lower fitness individuals)
-		BitVectorIndividual[] sv;
-		sv = (BitVectorIndividual[]) evalVect;
+		DoubleVectorIndividual[] sv;
+		sv = (DoubleVectorIndividual[]) evalVect;
 		Arrays.sort(sv);
 
 		// print pvector if requested
@@ -126,8 +123,9 @@ public class PBIL extends Algorithm {
 		// go through the top (selection_size) elements
 		for (int i = 0; i < selection_size; i++) {
 			for (int j = 0; j < genome_size; j++) {
-				probs[j] = probs[j] * (1.0 - learn_rate)
-						+ (sv[i].genome[j] ? 1.0 : 0.0) * learn_rate;
+				probs[j].updMixForSingle(sv[i].genome[j]);
+//				probs[j] = probs[j] * (1.0 - learn_rate)
+//						+ (sv[i].genome[j] ? 1.0 : 0.0) * learn_rate;
 			}
 		}
 	}
@@ -139,14 +137,16 @@ public class PBIL extends Algorithm {
 
 		// initialize probability vector
 		int i;
-		p = new double[genome_size];
+		p = new MixGaussVariable[genome_size];
 		for (i = 0; i < genome_size; i++)
-			p[i] = 0.5;
+			p[i] = new MixGaussVariable( problem.getGenomeMin(), 
+					problem.getGenomeMax(), 2, 
+					new double[] {-0.5, 0.5}, new double[] {0.5, 0.5}, new double[] {0.5,0.5});
 
 		// initialize solution vector
-		sv = new BitVectorIndividual[samples];
+		sv = new DoubleVectorIndividual[samples];
 		for (i = 0; i < samples; i++) {
-			sv[i] = new BitVectorIndividual(genome_size, rand);
+			sv[i] = new DoubleVectorIndividual(genome_size, rand);
 			sv[i].replaceUsingProbabilities(p);
 		}
 	}
